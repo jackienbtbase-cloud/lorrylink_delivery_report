@@ -196,10 +196,11 @@ const ADMIN_EMAIL = 'pyh@nbt.com';
 // Leave '' to let the page look for it automatically.
 const PO_FIELD = '';
 
-// Own lorry (our company's transporter account). Fill in after it is registered.
+// Own lorry (our company's transporter account).
 // Match by transporters.id (uuid) or by company name (case-insensitive). Either one is enough.
-const OWN_TRANSPORTER_IDS = [];            // e.g. ['xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx']
-const OWN_TRANSPORTER_NAMES = [];          // e.g. ['RT Logistics Own Lorry']
+// Every job done by an own lorry counts as a customer job, whatever its PO number or date.
+const OWN_TRANSPORTER_IDS = ['caaa854d-ba4c-4ed5-9435-b051840669ac'];   // Rentak Tegap
+const OWN_TRANSPORTER_NAMES = ['Rentak Tegap'];
 
 // Profit rules (RM = the awarded price)
 const MARGIN_SUBCONTRACT = 0.21;  // other transporter: cost = RM, profit = RM * 0.21
@@ -310,7 +311,10 @@ async function loadData() {
       const cost = own ? 0 : price;
       const po = poOf(j);
       const date = b.proposed_date || j.delivery_date || '';
-      const external = (date && date >= ALL_EXTERNAL_FROM) || po.toUpperCase().startsWith(EXTERNAL_PO_PREFIX.toUpperCase());
+      // own lorry jobs always count as customer jobs; otherwise by date or PO prefix
+      const external = own
+        || (date && date >= ALL_EXTERNAL_FROM)
+        || po.toUpperCase().startsWith(EXTERNAL_PO_PREFIX.toUpperCase());
       // internal job: cost only, no profit. external job: profit rules apply.
       const profit = external ? round2(price * (own ? MARGIN_OWN : MARGIN_SUBCONTRACT)) : 0;
       allRows.push({
