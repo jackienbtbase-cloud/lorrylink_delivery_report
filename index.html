@@ -101,6 +101,8 @@
   td.date { font-weight:600; }
   td.route { white-space:normal; min-width:160px; }
   .badge { display:inline-flex; align-items:center; gap:4px; font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--go-soft); color:var(--go-ink); margin-left:6px; }
+  .badge.ext { background:var(--info-soft); color:var(--info); margin-left:0; }
+  .badge.int { background:#e9edf0; color:var(--ink-2); margin-left:0; }
   .empty { text-align:center; padding:48px 16px !important; color:var(--muted); }
   .empty i { display:block; font-size:30px; color:var(--line-strong); margin-bottom:6px; }
 
@@ -169,7 +171,7 @@
               <th>Delivery date</th><th>Item type</th><th class="num">Qty</th>
               <th>Source</th><th>Destination</th>
               <th class="num">Cost (RM)</th><th class="num">Profit (RM)</th>
-              <th>PO number</th><th>Transporter</th>
+              <th>PO number</th><th>Type</th><th>Transporter</th>
             </tr>
             <tr id="totalrow"></tr>
           </thead>
@@ -200,6 +202,14 @@ const OWN_TRANSPORTER_NAMES = [];          // e.g. ['RT Logistics Own Lorry']
 // Profit rules (RM = the awarded price)
 const MARGIN_SUBCONTRACT = 0.21;  // other transporter: cost = RM, profit = RM * 0.21
 const MARGIN_OWN = 1.21;          // own lorry:        cost = 0,  profit = RM * 1.21
+
+// Only jobs whose PO number starts with this are outside customers' jobs (they earn profit).
+// Every other job is internal: it only costs money, so profit is 0.
+const EXTERNAL_PO_PREFIX = 'PT';
+
+// From this delivery date onward, EVERY job counts as an outside customer's job (even our own company's),
+// whatever its PO number looks like. Before this date, only the PO prefix above counts.
+const ALL_EXTERNAL_FROM = '2026-11-01';
 
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = (id) => document.getElementById(id);
@@ -282,16 +292,21 @@ async function loadData() {
       const own = isOwn(tp);
       const price = Number(j.accepted_price);
       const cost = own ? 0 : price;
-      const profit = round2(price * (own ? MARGIN_OWN : MARGIN_SUBCONTRACT));
+      const po = poOf(j);
+      const date = b.proposed_date || j.delivery_date || '';
+      const external = (date && date >= ALL_EXTERNAL_FROM) || po.toUpperCase().startsWith(EXTERNAL_PO_PREFIX.toUpperCase());
+      // internal job: cost only, no profit. external job: profit rules apply.
+      const profit = external ? round2(price * (own ? MARGIN_OWN : MARGIN_SUBCONTRACT)) : 0;
       allRows.push({
-        date: b.proposed_date || j.delivery_date || '',
+        date,
         item: String(j.item_desc || '').replace(/^Others:\s*/, ''),
         qty: Number(j.quantity) || 0,
         source: j.source_loc || '',
         dest: [j.dest_loc, ...stopsOf(j)].join(' / '),
         cost: round2(cost),
         profit,
-        po: poOf(j),
+        po,
+        external,
         transporter: tp ? tp.company_name : '',
         own
       });
@@ -379,12 +394,13 @@ function render() {
       <td class="num">${money(r.cost)}</td>
       <td class="num profit">${money(r.profit)}</td>
       <td>${r.po ? esc(r.po) : '<span class="muted">-</span>'}</td>
+      <td>${r.external ? '<span class="badge ext">Customer</span>' : '<span class="badge int">Internal</span>'}</td>
       <td>${esc(r.transporter)}${r.own ? '<span class="badge"><i class="ri-truck-fill"></i>Own lorry</span>' : ''}</td>
     </tr>`).join('')
-    : '<tr><td colspan="9" class="empty"><i class="ri-inbox-line"></i>No jobs in this range.</td></tr>';
+    : '<tr><td colspan="10" class="empty"><i class="ri-inbox-line"></i>No jobs in this range.</td></tr>';
 
   $('totalrow').innerHTML = rows.length
-    ? `<td colspan="5">Total</td><td class="num">${money(totalCost)}</td><td class="num profit">${money(totalProfit)}</td><td colspan="2"></td>`
+    ? `<td colspan="5">Total</td><td class="num">${money(totalCost)}</td><td class="num profit">${money(totalProfit)}</td><td colspan="3"></td>`
     : '';
   // keep the Total row right under the header row
   const headRow = document.querySelector('thead tr');
@@ -396,10 +412,10 @@ function render() {
 // ==========================================
 function downloadCsv() {
   const rows = filtered();
-  const head = ['Delivery date','Item type','Qty','Source','Destination','Cost (RM)','Profit (RM)','PO number','Transporter'];
+  const head = ['Delivery date','Item type','Qty','Source','Destination','Cost (RM)','Profit (RM)','PO number','Type','Transporter'];
   const cell = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
   const lines = [head.map(cell).join(',')].concat(rows.map(r =>
-    [r.date, r.item, r.qty, r.source, r.dest, r.cost.toFixed(2), r.profit.toFixed(2), r.po, r.transporter + (r.own ? ' (own lorry)' : '')].map(cell).join(',')));
+    [r.date, r.item, r.qty, r.source, r.dest, r.cost.toFixed(2), r.profit.toFixed(2), r.po, r.external ? 'Customer' : 'Internal', r.transporter + (r.own ? ' (own lorry)' : '')].map(cell).join(',')));
   const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
