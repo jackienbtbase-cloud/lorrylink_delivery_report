@@ -101,6 +101,8 @@
   td.date { font-weight:600; }
   td.route { white-space:normal; min-width:160px; }
   .badge { display:inline-flex; align-items:center; gap:4px; font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--go-soft); color:var(--go-ink); margin-left:6px; }
+  .badge.warn { background:var(--road-soft); color:var(--road-ink); margin-left:0; }
+  tbody tr.nobid td { background:var(--road-soft) !important; }
   .badge.ext { background:var(--info-soft); color:var(--info); margin-left:0; }
   .badge.int { background:#e9edf0; color:var(--ink-2); margin-left:0; }
   .empty { text-align:center; padding:48px 16px !important; color:var(--muted); }
@@ -215,6 +217,8 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = (id) => document.getElementById(id);
 let allRows = [];
 let poWarning = '';
+let noBidCount = 0;
+let onlyNoBid = false;
 
 // ==========================================
 // HELPERS
@@ -297,7 +301,8 @@ async function loadData() {
       // the awarded bid; if none is marked accepted, fall back to a bid at exactly the accepted price
       let b = list.find(x => x.status === 'accepted')
         || list.find(x => Number(x.proposed_price) === Number(j.accepted_price));
-      if (!b || b.status !== 'accepted') noBid++;
+      const missing = !b || b.status !== 'accepted';
+      if (missing) noBid++;
       b = b || {};
       const tp = tpById.get(b.transporter_id);
       const own = isOwn(tp);
@@ -318,6 +323,7 @@ async function loadData() {
         profit,
         po,
         external,
+        noBid: missing,
         transporter: tp ? tp.company_name : '',
         own
       });
@@ -332,10 +338,6 @@ async function loadData() {
       if (PO_FIELD ? !(PO_FIELD in sample) : !allRows.some(r => r.po)) {
         poWarning = 'No PO number column found in the jobs table. Columns: ' + cols.join(', ') + '. Set PO_FIELD at the top of report.html.';
       }
-    }
-    if (noBid) {
-      poWarning += (poWarning ? ' ' : '') + noBid + ' job' + (noBid === 1 ? ' has' : 's have') +
-        ' an accepted price but no accepted bid, so the transporter is unknown (cost is counted as a normal transporter).';
     }
     render();
   } catch (e) {
