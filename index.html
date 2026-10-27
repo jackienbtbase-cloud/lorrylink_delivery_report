@@ -271,23 +271,34 @@ async function fetchAll(build) {
 async function loadData() {
   $('status').textContent = 'Loading...';
   try {
-    // Awarded bids only (accepted). Covers assigned jobs and archived jobs that were awarded.
+    // Start from the jobs themselves: every job that has an accepted price is a successful deal
+    // (archived ones included). The bids are only used to find who the transporter was.
+    const jobs = await fetchAll(() => db.from('jobs')
+      .select('*')
+      .not('accepted_price', 'is', null)
+      .gt('accepted_price', 0)
+      .order('id'));
     const bids = await fetchAll(() => db.from('bids')
-      .select('*, jobs(*)')
-      .eq('status', 'accepted')
-      .order('created_at', { ascending: false })
+      .select('*')
       .order('id'));
     const tps = await fetchAll(() => db.from('transporters').select('id, company_name').order('id'));
     const tpById = new Map(tps.map(t => [t.id, t]));
-
-    const seen = new Set();
-    allRows = [];
+    const bidsByJob = new Map();
     for (const b of bids) {
-      const j = b.jobs;
-      if (!j || seen.has(j.id)) continue;
-      // Only jobs with an accepted price count as a successful deal
-      if (j.accepted_price === null || j.accepted_price === undefined || !(Number(j.accepted_price) > 0)) continue;
-      seen.add(j.id);
+      const k = String(b.job_id);
+      if (!bidsByJob.has(k)) bidsByJob.set(k, []);
+      bidsByJob.get(k).push(b);
+    }
+
+    allRows = [];
+    let noBid = 0;
+    for (const j of jobs) {
+      const list = bidsByJob.get(String(j.id)) || [];
+      // the awarded bid; if none is marked accepted, fall back to a bid at exactly the accepted price
+      let b = list.find(x => x.status === 'accepted')
+        || list.find(x => Number(x.proposed_price) === Number(j.accepted_price));
+      if (!b || b.status !== 'accepted') noBid++;
+      b = b || {};
       const tp = tpById.get(b.transporter_id);
       const own = isOwn(tp);
       const price = Number(j.accepted_price);
@@ -313,13 +324,18 @@ async function loadData() {
     }
     allRows.sort((a, b) => b.date.localeCompare(a.date));
     // Tell the user if no PO column could be found, and which columns the jobs table has
-    const sample = bids.find(b => b.jobs);
+    const sample = jobs[0];
+    poWarning = '';
     if (sample) {
-      const cols = Object.keys(sample.jobs);
+      const cols = Object.keys(sample);
       console.log('jobs columns:', cols);
-      poWarning = (PO_FIELD ? !(PO_FIELD in sample.jobs) : !allRows.some(r => r.po))
-        ? 'No PO number column found in the jobs table. Columns: ' + cols.join(', ') + '. Set PO_FIELD at the top of report.html.'
-        : '';
+      if (PO_FIELD ? !(PO_FIELD in sample) : !allRows.some(r => r.po)) {
+        poWarning = 'No PO number column found in the jobs table. Columns: ' + cols.join(', ') + '. Set PO_FIELD at the top of report.html.';
+      }
+    }
+    if (noBid) {
+      poWarning += (poWarning ? ' ' : '') + noBid + ' job' + (noBid === 1 ? ' has' : 's have') +
+        ' an accepted price but no accepted bid, so the transporter is unknown (cost is counted as a normal transporter).';
     }
     render();
   } catch (e) {
