@@ -32,7 +32,7 @@
   .brand-name { font-size:1.05rem; font-weight:700; }
   .brand-sub { font-weight:400; opacity:.75; margin-left:6px; }
 
-  main { max-width:1280px; margin:0 auto; padding:20px 24px 40px; display:flex; flex-direction:column; gap:16px; }
+  main { max-width:1600px; margin:0 auto; padding:20px 24px 40px; display:flex; flex-direction:column; gap:16px; }
 
   /* Generic */
   .panel { background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); padding:18px; }
@@ -79,7 +79,7 @@
   .cards { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; }
   .card { background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); padding:16px 18px; display:flex; align-items:center; gap:14px; border-left:4px solid var(--line-strong); }
   .card .ic { width:42px; height:42px; border-radius:10px; display:grid; place-items:center; font-size:22px; flex-shrink:0; }
-  .card b { display:block; font-size:1.45rem; line-height:1.15; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+  .card b { display:block; font-size:1.7rem; line-height:1.15; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
   .card span { font-size:.78rem; color:var(--muted); font-weight:500; }
   .card.c-jobs { border-left-color:var(--info); } .c-jobs .ic { background:var(--info-soft); color:var(--info); }
   .card.c-qty { border-left-color:var(--road); } .c-qty .ic { background:var(--road-soft); color:var(--road-ink); }
@@ -88,10 +88,10 @@
 
   /* Table */
   .tablebox { background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); overflow:hidden; }
-  .tablewrap { overflow:auto; max-height:calc(100vh - 430px); min-height:160px; }
-  table { border-collapse:separate; border-spacing:0; width:100%; }
-  th, td { padding:11px 14px; text-align:left; white-space:nowrap; border-bottom:1px solid var(--line); }
-  th { background:var(--surface-2); font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-2); position:sticky; top:0; z-index:3; }
+  .tablewrap { overflow:auto; max-height:calc(100vh - 380px); min-height:240px; }
+  table { border-collapse:separate; border-spacing:0; width:100%; font-size:16px; }
+  th, td { padding:15px 18px; text-align:left; white-space:nowrap; border-bottom:1px solid var(--line); }
+  th { background:var(--surface-2); font-size:.8rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-2); position:sticky; top:0; z-index:3; }
   td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
   tbody tr:nth-child(even) td { background:#fbfcfc; }
   tbody tr:hover td { background:var(--info-soft); }
@@ -99,8 +99,8 @@
   #totalrow td.profit { color:var(--go-ink); }
   td.profit { color:var(--go-ink); font-weight:600; }
   td.date { font-weight:600; }
-  td.route { white-space:normal; min-width:160px; }
-  .badge { display:inline-flex; align-items:center; gap:4px; font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--go-soft); color:var(--go-ink); margin-left:6px; }
+  td.route { white-space:normal; min-width:190px; }
+  .badge { display:inline-flex; align-items:center; gap:4px; font-size:.8rem; font-weight:700; padding:3px 10px; border-radius:999px; background:var(--go-soft); color:var(--go-ink); margin-left:6px; }
   .badge.warn { background:var(--road-soft); color:var(--road-ink); margin-left:0; }
   tbody tr.nobid td { background:var(--road-soft) !important; }
   .badge.ext { background:var(--info-soft); color:var(--info); margin-left:0; }
